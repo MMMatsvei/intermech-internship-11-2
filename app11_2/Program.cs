@@ -13,19 +13,26 @@
             File.Delete(outputFile);
         }
 
-        Thread[] threads = new Thread[inputFiles.Length];
 
+        ManualResetEvent[] doneEvents = new ManualResetEvent[inputFiles.Length];
         for (int i = 0; i < inputFiles.Length; i++)
         {
             int j = i;
-            threads[i] = new Thread(() => ProcessFile(inputFiles[j]));
-            threads[i].Start();
+            doneEvents[j] = new ManualResetEvent(false);
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                try
+                {
+                    ProcessFile(inputFiles[j]);
+                }
+                finally
+                {
+                    doneEvents[j].Set();
+                }
+            });
         }
 
-        foreach (var thread in threads)
-        {
-            thread.Join();
-        }
+        WaitHandle.WaitAll(doneEvents);
 
     }
 
